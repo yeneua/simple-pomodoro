@@ -59,12 +59,8 @@ struct SetupView: View {
             }
             .padding(16)
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("완료") { endEditing() }
-            }
-        }
+        // 키패드가 올라와도 레이아웃은 그대로 둔다
+        .ignoresSafeArea(.keyboard)
         .onChange(of: editing) { _, now in if !now { commitDraft() } }
     }
 
@@ -85,29 +81,27 @@ struct SetupView: View {
         HStack(spacing: 32) {
             stepButton("minus") { endEditing(); mins = max(1, mins - 1) }
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                // 숫자를 누르면 키패드로 직접 입력
-                ZStack {
-                    TextField("", text: $draft)
-                        .keyboardType(.numberPad)
-                        .focused($editing)
-                        .multilineTextAlignment(.center)
-                        .font(.pretendard(numberSize))
-                        .monospacedDigit()
-                        .foregroundStyle(p.ui)
-                        .tint(p.ui)
-                        .fixedSize()
-                        .onChange(of: draft) { _, v in
-                            let digits = String(v.filter(\.isNumber).prefix(3))
-                            if digits != v { draft = digits }
-                        }
-                        .opacity(editing ? 1 : 0)
-                    Text(editing ? "" : "\(mins)")
-                        .font(.pretendard(numberSize))
-                        .monospacedDigit()
-                        .foregroundStyle(p.ui)
-                        .contentTransition(.numericText())
-                        .onTapGesture { draft = "\(mins)"; editing = true }
-                }
+                // 숫자를 누르면 키패드로 직접 입력. 키 입력은 안 보이는 필드가 받고,
+                // 화면엔 같은 숫자 자리에 친 값을 보여준다 (아직 안 쳤으면 기존 값을 흐리게).
+                Text(editing && !draft.isEmpty ? draft : "\(mins)")
+                    .font(.pretendard(numberSize))
+                    .monospacedDigit()
+                    .foregroundStyle(editing && draft.isEmpty ? p.uiDim : p.ui)
+                    .contentTransition(.numericText())
+                    .contentShape(Rectangle())
+                    .onTapGesture { draft = ""; editing = true }
+                    .background {
+                        TextField("", text: $draft)
+                            .keyboardType(.numberPad)
+                            .focused($editing)
+                            .frame(width: 1, height: 1)
+                            .opacity(0.01)
+                            .allowsHitTesting(false)
+                            .onChange(of: draft) { _, v in
+                                let digits = String(v.filter(\.isNumber).prefix(3))
+                                if digits != v { draft = digits }
+                            }
+                    }
                 Text("분")
                     .font(.pretendard(18, weight: .semibold))
                     .foregroundStyle(p.uiDim)
