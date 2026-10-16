@@ -171,7 +171,7 @@ struct RunView: View {
                 IconButton(systemName: timer.isPaused ? "play.fill" : "pause.fill", action: togglePause)
                 IconButton(systemName: "arrow.counterclockwise") { timer.stop() }
             } else {
-                IconButton(systemName: mode == .flip ? "chart.pie.fill" : "rectangle.split.2x1", action: toggleMode)
+                IconButton(systemName: mode == .flip ? "timer" : "rectangle.split.2x1", action: toggleMode)
                 IconButton(systemName: theme == .light ? "moon" : "sun.max", action: toggleTheme)
             }
         }
@@ -183,9 +183,9 @@ struct RunView: View {
 
     private var controls: some View {
         HStack(spacing: 12) {
-            pill(timer.isPaused ? "계속" : "일시정지", action: togglePause)
-            pill("처음으로") { timer.stop() }
-            IconButton(systemName: mode == .flip ? "chart.pie.fill" : "rectangle.split.2x1", action: toggleMode)
+            IconButton(systemName: timer.isPaused ? "play.fill" : "pause.fill", action: togglePause)
+            IconButton(systemName: "arrow.counterclockwise") { timer.stop() }
+            IconButton(systemName: mode == .flip ? "timer" : "rectangle.split.2x1", action: toggleMode)
             IconButton(systemName: theme == .light ? "moon" : "sun.max", action: toggleTheme)
         }
         .padding(.bottom, 28)
@@ -207,18 +207,6 @@ struct RunView: View {
     private func toggleTheme() {
         theme = theme == .light ? .dark : .light
         revealControls()
-    }
-
-    private func pill(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.pretendard(16, weight: .semibold))
-                .foregroundStyle(p.ui)
-                .padding(.horizontal, 22)
-                .padding(.vertical, 12)
-                .background(p.btn, in: Capsule())
-        }
-        .buttonStyle(.plain)
     }
 
     /// 컨트롤을 보여주고, 실행 중이면 3초 뒤 숨긴다.
