@@ -2,7 +2,7 @@ import SwiftUI
 import UserNotifications
 
 @main
-struct PomodoroApp: App {
+struct SimPoApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {

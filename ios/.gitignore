@@ -1,6 +1,6 @@
 *.xcodeproj/
-PomodoroTimer/Info.plist
+SimPo/Info.plist
 xcuserdata/
 DerivedData/
 build/
-PomodoroTimer/Fonts/
+SimPo/Fonts/
