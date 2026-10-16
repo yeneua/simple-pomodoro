@@ -39,6 +39,9 @@ extension Font {
     }
 }
 
+/// 아이패드에선 숫자를 아이폰 비율보다 조금 작게 그린다
+let isPad = UIDevice.current.userInterfaceIdiom == .pad
+
 /// 원형 아이콘 버튼 (라이트/다크, 플립/다이얼 전환)
 struct IconButton: View {
     let systemName: String

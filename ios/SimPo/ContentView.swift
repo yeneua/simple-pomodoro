@@ -30,14 +30,16 @@ struct SetupView: View {
     let onStart: () -> Void
     @Environment(\.palette) private var p
     @State private var draft = ""
-    @FocusState private var editing: Bool
+    @FocusState private var keyboardUp: Bool
+    @State private var padOpen = false   // 아이패드용 숫자 키패드 팝오버
+    private var editing: Bool { keyboardUp || padOpen }
 
     var body: some View {
         GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
             let numberSize = landscape
                 ? min(geo.size.width * 0.17, geo.size.height * 0.42)
-                : min(geo.size.width * 0.26, geo.size.height * 0.22)
+                : min(geo.size.width * 0.26, geo.size.height * 0.22) * (isPad ? 0.75 : 1)
             let spacing = min(geo.size.height * 0.06, 40)
             Group {
                 if landscape {
@@ -62,13 +64,18 @@ struct SetupView: View {
         // 키패드가 올라와도 레이아웃은 그대로 둔다
         .ignoresSafeArea(.keyboard)
         .onChange(of: editing) { _, now in if !now { commitDraft() } }
+        .onChange(of: draft) { _, v in
+            let digits = String(v.filter(\.isNumber).prefix(3))
+            if digits != v { draft = digits }
+        }
     }
 
     /// 입력 중이면 바로 반영하고 키패드를 닫는다.
     private func endEditing() {
         guard editing else { return }
         commitDraft()
-        editing = false
+        keyboardUp = false
+        padOpen = false
     }
 
     /// 입력한 숫자를 1~180분으로 맞춰 반영한다. 비어 있으면 이전 값 유지.
@@ -89,18 +96,23 @@ struct SetupView: View {
                     .foregroundStyle(editing && draft.isEmpty ? p.uiDim : p.ui)
                     .contentTransition(.numericText())
                     .contentShape(Rectangle())
-                    .onTapGesture { draft = ""; editing = true }
+                    .onTapGesture {
+                        draft = ""
+                        // 아이패드엔 시스템 숫자 키패드가 없어서 직접 만든 키패드를 띄운다
+                        if isPad { padOpen = true } else { keyboardUp = true }
+                    }
+                    .popover(isPresented: $padOpen, arrowEdge: .bottom) {
+                        NumberPad(text: $draft, maxDigits: 3)
+                            .presentationCompactAdaptation(.popover)
+                            .presentationBackground(Palette.of(theme).bg)
+                    }
                     .background {
                         TextField("", text: $draft)
                             .keyboardType(.numberPad)
-                            .focused($editing)
+                            .focused($keyboardUp)
                             .frame(width: 1, height: 1)
                             .opacity(0.01)
                             .allowsHitTesting(false)
-                            .onChange(of: draft) { _, v in
-                                let digits = String(v.filter(\.isNumber).prefix(3))
-                                if digits != v { draft = digits }
-                            }
                     }
                 Text("분")
                     .font(.pretendard(18, weight: .semibold))
@@ -111,14 +123,15 @@ struct SetupView: View {
         }
     }
 
+    /// 아이패드에선 프리셋 버튼을 조금 키운다
     private var presets: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: isPad ? 12 : 10) {
             ForEach([5, 15, 25, 50], id: \.self) { m in
                 Button { endEditing(); mins = m } label: {
                     Text("\(m)")
-                        .font(.pretendard(15, weight: .semibold))
+                        .font(.pretendard(isPad ? 18 : 15, weight: .semibold))
                         .foregroundStyle(p.uiDim)
-                        .frame(width: 52, height: 36)
+                        .frame(width: isPad ? 64 : 52, height: isPad ? 44 : 36)
                         .background(p.btn, in: Capsule())
                 }
                 .buttonStyle(.plain)
@@ -148,6 +161,45 @@ struct SetupView: View {
                 .foregroundStyle(p.ui)
                 .frame(width: 56, height: 56)
                 .background(p.btn, in: Circle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// 아이패드용 숫자 키패드 (1~9, 0, 지우기)
+struct NumberPad: View {
+    @Binding var text: String
+    let maxDigits: Int
+    @Environment(\.palette) private var p
+
+    var body: some View {
+        Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+            ForEach([["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]], id: \.self) { row in
+                GridRow { ForEach(row, id: \.self) { key($0) } }
+            }
+            GridRow {
+                Color.clear.frame(width: 76, height: 56)
+                key("0")
+                Button { if !text.isEmpty { text.removeLast() } } label: {
+                    Image(systemName: "delete.left")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundStyle(p.ui)
+                        .frame(width: 76, height: 56)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(16)
+        .background(p.bg)
+    }
+
+    private func key(_ d: String) -> some View {
+        Button { if text.count < maxDigits { text += d } } label: {
+            Text(d)
+                .font(.pretendard(26, weight: .semibold))
+                .foregroundStyle(p.ui)
+                .frame(width: 76, height: 56)
+                .background(p.btn, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
     }
@@ -214,7 +266,7 @@ struct RunView: View {
                 IconButton(systemName: theme == .light ? "moon" : "sun.max", action: toggleTheme)
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, isPad ? 40 : 16)
         .opacity(showControls ? 1 : 0)
         .allowsHitTesting(showControls)
         .animation(.easeInOut(duration: 0.25), value: showControls)
@@ -227,7 +279,7 @@ struct RunView: View {
             IconButton(systemName: mode == .flip ? "timer" : "rectangle.split.2x1", action: toggleMode)
             IconButton(systemName: theme == .light ? "moon" : "sun.max", action: toggleTheme)
         }
-        .padding(.bottom, 28)
+        .padding(.bottom, isPad ? 56 : 28)
         .opacity(showControls ? 1 : 0)
         .allowsHitTesting(showControls)
         .animation(.easeInOut(duration: 0.25), value: showControls)

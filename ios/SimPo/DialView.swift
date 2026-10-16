@@ -8,7 +8,7 @@ struct DialView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let side = min(geo.size.width * 0.9, geo.size.height * 0.86)
+            let side = min(geo.size.width * 0.9, geo.size.height * 0.86) * (isPad ? 0.85 : 1)
             let u = side / 220   // 웹 버전 SVG viewBox(220) 기준 단위
             ZStack {
                 face(p.fg, u: u)
