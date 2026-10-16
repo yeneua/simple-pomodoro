@@ -9,8 +9,8 @@ struct FlipClock: View {
         let values = showHours ? [h, m, s] : [m, s]
         GeometryReader { geo in
             let cw = showHours
-                ? min(geo.size.width * 0.28, geo.size.height * 0.48)
-                : min(geo.size.width * 0.40, geo.size.height * 0.52)
+                ? min(geo.size.width * 0.28, geo.size.height * 0.55)
+                : min(geo.size.width * 0.40, geo.size.height * 0.6)
             HStack(spacing: cw * 0.07) {
                 ForEach(values.indices, id: \.self) { i in
                     FlipCard(value: String(format: "%02d", values[i]), width: cw)

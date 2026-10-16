@@ -32,44 +32,20 @@ struct SetupView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let numberSize = min(geo.size.width * 0.26, geo.size.height * 0.22)
-            VStack(spacing: min(geo.size.height * 0.06, 40)) {
-                HStack(spacing: 32) {
-                    stepButton("minus") { mins = max(1, mins - 1) }
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("\(mins)")
-                            .font(.pretendard(numberSize))
-                            .monospacedDigit()
-                            .foregroundStyle(p.ui)
-                            .contentTransition(.numericText())
-                        Text("분")
-                            .font(.pretendard(18, weight: .semibold))
-                            .foregroundStyle(p.uiDim)
+            let landscape = geo.size.width > geo.size.height
+            let numberSize = landscape
+                ? min(geo.size.width * 0.17, geo.size.height * 0.42)
+                : min(geo.size.width * 0.26, geo.size.height * 0.22)
+            let spacing = min(geo.size.height * 0.06, 40)
+            Group {
+                if landscape {
+                    HStack(spacing: 48) {
+                        stepper(numberSize)
+                        VStack(spacing: spacing) { presets; startButton }
                     }
-                    .frame(minWidth: numberSize * 1.7)
-                    stepButton("plus") { mins = min(180, mins + 1) }
+                } else {
+                    VStack(spacing: spacing) { stepper(numberSize); presets; startButton }
                 }
-                HStack(spacing: 10) {
-                    ForEach([5, 15, 25, 50], id: \.self) { m in
-                        Button { mins = m } label: {
-                            Text("\(m)")
-                                .font(.pretendard(15, weight: .semibold))
-                                .foregroundStyle(p.uiDim)
-                                .frame(width: 52, height: 36)
-                                .background(p.btn, in: Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                Button(action: onStart) {
-                    Text("시작")
-                        .font(.pretendard(20))
-                        .foregroundStyle(p.bg)
-                        .padding(.horizontal, 64)
-                        .padding(.vertical, 16)
-                        .background(p.ui, in: Capsule())
-                }
-                .buttonStyle(.plain)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -79,6 +55,51 @@ struct SetupView: View {
             }
             .padding(16)
         }
+    }
+
+    private func stepper(_ numberSize: CGFloat) -> some View {
+        HStack(spacing: 32) {
+            stepButton("minus") { mins = max(1, mins - 1) }
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\(mins)")
+                    .font(.pretendard(numberSize))
+                    .monospacedDigit()
+                    .foregroundStyle(p.ui)
+                    .contentTransition(.numericText())
+                Text("분")
+                    .font(.pretendard(18, weight: .semibold))
+                    .foregroundStyle(p.uiDim)
+            }
+            .frame(minWidth: numberSize * 1.7)
+            stepButton("plus") { mins = min(180, mins + 1) }
+        }
+    }
+
+    private var presets: some View {
+        HStack(spacing: 10) {
+            ForEach([5, 15, 25, 50], id: \.self) { m in
+                Button { mins = m } label: {
+                    Text("\(m)")
+                        .font(.pretendard(15, weight: .semibold))
+                        .foregroundStyle(p.uiDim)
+                        .frame(width: 52, height: 36)
+                        .background(p.btn, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var startButton: some View {
+        Button(action: onStart) {
+            Text("시작")
+                .font(.pretendard(20))
+                .foregroundStyle(p.bg)
+                .padding(.horizontal, 64)
+                .padding(.vertical, 16)
+                .background(p.ui, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private func stepButton(_ icon: String, action: @escaping () -> Void) -> some View {
@@ -105,6 +126,14 @@ struct RunView: View {
     @State private var pulse = false
 
     var body: some View {
+        GeometryReader { geo in
+            content(landscape: geo.size.width > geo.size.height)
+        }
+        .statusBarHidden()
+        .persistentSystemOverlays(.hidden)
+    }
+
+    private func content(landscape: Bool) -> some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: timer.isPaused || timer.isDone)) { ctx in
             let left = timer.remaining(at: ctx.date)
             let sec = Int(left.rounded(.up))
@@ -117,6 +146,8 @@ struct RunView: View {
             .opacity(pulse ? 0.25 : 1)
             .onChange(of: sec) { _, s in if s <= 0 { timer.finish() } }
         }
+        // 가로면 양옆 아이콘 자리를 비워둔다
+        .padding(.horizontal, landscape ? 72 : 0)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
         .onTapGesture {
@@ -124,35 +155,58 @@ struct RunView: View {
             else if showControls && !timer.isPaused { showControls = false }
             else { revealControls() }
         }
-        .overlay(alignment: .bottom) { controls }
+        .overlay(alignment: .bottom) { if !landscape { controls } }
+        .overlay(alignment: .leading) { if landscape { sideControls(leading: true) } }
+        .overlay(alignment: .trailing) { if landscape { sideControls(leading: false) } }
         .onChange(of: timer.isDone) { _, done in
             guard done else { return }
             withAnimation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true)) { pulse = true }
         }
-        .statusBarHidden()
-        .persistentSystemOverlays(.hidden)
+    }
+
+    /// 가로 화면: 왼쪽엔 일시정지·처음으로, 오른쪽엔 모드·테마 전환
+    private func sideControls(leading: Bool) -> some View {
+        VStack(spacing: 16) {
+            if leading {
+                IconButton(systemName: timer.isPaused ? "play.fill" : "pause.fill", action: togglePause)
+                IconButton(systemName: "arrow.counterclockwise") { timer.stop() }
+            } else {
+                IconButton(systemName: mode == .flip ? "chart.pie.fill" : "rectangle.split.2x1", action: toggleMode)
+                IconButton(systemName: theme == .light ? "moon" : "sun.max", action: toggleTheme)
+            }
+        }
+        .padding(.horizontal, 16)
+        .opacity(showControls ? 1 : 0)
+        .allowsHitTesting(showControls)
+        .animation(.easeInOut(duration: 0.25), value: showControls)
     }
 
     private var controls: some View {
         HStack(spacing: 12) {
-            pill(timer.isPaused ? "계속" : "일시정지") {
-                timer.togglePause()
-                revealControls()
-            }
+            pill(timer.isPaused ? "계속" : "일시정지", action: togglePause)
             pill("처음으로") { timer.stop() }
-            IconButton(systemName: mode == .flip ? "chart.pie.fill" : "rectangle.split.2x1") {
-                mode = mode == .flip ? .dial : .flip
-                revealControls()
-            }
-            IconButton(systemName: theme == .light ? "moon" : "sun.max") {
-                theme = theme == .light ? .dark : .light
-                revealControls()
-            }
+            IconButton(systemName: mode == .flip ? "chart.pie.fill" : "rectangle.split.2x1", action: toggleMode)
+            IconButton(systemName: theme == .light ? "moon" : "sun.max", action: toggleTheme)
         }
         .padding(.bottom, 28)
         .opacity(showControls ? 1 : 0)
         .allowsHitTesting(showControls)
         .animation(.easeInOut(duration: 0.25), value: showControls)
+    }
+
+    private func togglePause() {
+        timer.togglePause()
+        revealControls()
+    }
+
+    private func toggleMode() {
+        mode = mode == .flip ? .dial : .flip
+        revealControls()
+    }
+
+    private func toggleTheme() {
+        theme = theme == .light ? .dark : .light
+        revealControls()
     }
 
     private func pill(_ title: String, action: @escaping () -> Void) -> some View {
