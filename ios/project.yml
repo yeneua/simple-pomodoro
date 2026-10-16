@@ -11,6 +11,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.yeneua.simpo
+        DEVELOPMENT_TEAM: DAW3L88K3R
+        CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
