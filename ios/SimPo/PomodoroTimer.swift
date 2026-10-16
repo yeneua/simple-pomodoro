@@ -61,8 +61,8 @@ enum Notifier {
         let center = UNUserNotificationCenter.current()
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
         let content = UNMutableNotificationContent()
-        content.title = "뽀모도로"
-        content.body = "시간이 다 됐어요"
+        // 앱 이름(SimPo)은 iOS가 알림 위에 따로 보여준다
+        content.title = "시간이 다 됐어요"
         content.sound = .default
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)
         center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
