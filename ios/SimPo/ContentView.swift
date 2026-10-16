@@ -29,6 +29,8 @@ struct SetupView: View {
     @Binding var theme: AppTheme
     let onStart: () -> Void
     @Environment(\.palette) private var p
+    @State private var draft = ""
+    @FocusState private var editing: Bool
 
     var body: some View {
         GeometryReader { geo in
@@ -48,6 +50,8 @@ struct SetupView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture { endEditing() }
         }
         .overlay(alignment: .topTrailing) {
             IconButton(systemName: theme == .light ? "moon" : "sun.max") {
@@ -55,30 +59,68 @@ struct SetupView: View {
             }
             .padding(16)
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("완료") { endEditing() }
+            }
+        }
+        .onChange(of: editing) { _, now in if !now { commitDraft() } }
+    }
+
+    /// 입력 중이면 바로 반영하고 키패드를 닫는다.
+    private func endEditing() {
+        guard editing else { return }
+        commitDraft()
+        editing = false
+    }
+
+    /// 입력한 숫자를 1~180분으로 맞춰 반영한다. 비어 있으면 이전 값 유지.
+    private func commitDraft() {
+        if let n = Int(draft) { mins = min(180, max(1, n)) }
+        draft = ""
     }
 
     private func stepper(_ numberSize: CGFloat) -> some View {
         HStack(spacing: 32) {
-            stepButton("minus") { mins = max(1, mins - 1) }
+            stepButton("minus") { endEditing(); mins = max(1, mins - 1) }
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("\(mins)")
-                    .font(.pretendard(numberSize))
-                    .monospacedDigit()
-                    .foregroundStyle(p.ui)
-                    .contentTransition(.numericText())
+                // 숫자를 누르면 키패드로 직접 입력
+                ZStack {
+                    TextField("", text: $draft)
+                        .keyboardType(.numberPad)
+                        .focused($editing)
+                        .multilineTextAlignment(.center)
+                        .font(.pretendard(numberSize))
+                        .monospacedDigit()
+                        .foregroundStyle(p.ui)
+                        .tint(p.ui)
+                        .fixedSize()
+                        .onChange(of: draft) { _, v in
+                            let digits = String(v.filter(\.isNumber).prefix(3))
+                            if digits != v { draft = digits }
+                        }
+                        .opacity(editing ? 1 : 0)
+                    Text(editing ? "" : "\(mins)")
+                        .font(.pretendard(numberSize))
+                        .monospacedDigit()
+                        .foregroundStyle(p.ui)
+                        .contentTransition(.numericText())
+                        .onTapGesture { draft = "\(mins)"; editing = true }
+                }
                 Text("분")
                     .font(.pretendard(18, weight: .semibold))
                     .foregroundStyle(p.uiDim)
             }
             .frame(minWidth: numberSize * 1.7)
-            stepButton("plus") { mins = min(180, mins + 1) }
+            stepButton("plus") { endEditing(); mins = min(180, mins + 1) }
         }
     }
 
     private var presets: some View {
         HStack(spacing: 10) {
             ForEach([5, 15, 25, 50], id: \.self) { m in
-                Button { mins = m } label: {
+                Button { endEditing(); mins = m } label: {
                     Text("\(m)")
                         .font(.pretendard(15, weight: .semibold))
                         .foregroundStyle(p.uiDim)
@@ -91,7 +133,10 @@ struct SetupView: View {
     }
 
     private var startButton: some View {
-        Button(action: onStart) {
+        Button {
+            endEditing()
+            onStart()
+        } label: {
             Text("시작")
                 .font(.pretendard(20))
                 .foregroundStyle(p.bg)
