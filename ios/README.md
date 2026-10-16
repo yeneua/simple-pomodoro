@@ -17,7 +17,7 @@ Xcode에서 `SimPo` 타깃 → Signing & Capabilities → Team 선택 → 아이
 ## App Store 올리기 전에
 
 1. [Apple Developer Program](https://developer.apple.com/programs/) 가입 (연 $99)
-2. `project.yml`의 `com.example.simpo`를 본인 번들 ID로 바꾸고 `xcodegen` 다시 실행
+2. 번들 ID는 `com.yeneua.simpo` (`project.yml`). 등록 후엔 바꿀 수 없음
 3. [App Store Connect](https://appstoreconnect.apple.com)에서 새 앱 등록 (같은 번들 ID)
 4. Xcode → Product → Archive → Distribute App → App Store Connect
 5. App Store Connect에서 스크린샷, 설명, 개인정보 처리방침 URL 입력 후 심사 제출
